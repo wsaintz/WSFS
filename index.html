@@ -2,217 +2,418 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>WSFS - Mobile Simulator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Sim Launcher</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
-        #ui-overlay {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            color: white;
-            background: rgba(0,0,0,0.6);
-            padding: 10px 15px;
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Main Container */
+        .app-container {
+            width: 90vw;
+            max-width: 1200px;
+            height: 85vh;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 260px;
+            background: rgba(15, 23, 42, 0.6);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 40px 20px;
+        }
+
+        .logo-area {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-bottom: 40px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .nav-links li button {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 12px 20px;
+            text-align: left;
+            font-size: 1rem;
+            font-weight: 500;
             border-radius: 8px;
-            pointer-events: none;
-            font-size: 14px;
-            border: 1px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
-        /* Mobile Joystick Styles */
-        .joystick-base {
-            position: absolute;
-            bottom: 40px;
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            touch-action: none;
+
+        .nav-links li button:hover, 
+        .nav-links li button.active {
+            background: var(--accent-color);
+            color: var(--bg-color);
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
         }
-        #left-joystick { left: 40px; }
-        #right-joystick { right: 40px; }
-        .joystick-stick {
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            padding: 50px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.4s ease forwards;
+            height: 100%;
+        }
+
+        .page.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Page Elements */
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: var(--text-main);
+        }
+
+        p {
+            color: var(--text-muted);
+            line-height: 1.6;
+            font-size: 1.05rem;
+            margin-bottom: 30px;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 14px 32px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            align-self: flex-start;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+        }
+
+        /* Start Page Setup Grid */
+        .setup-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+            max-width: 800px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        select, input {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--accent-color);
+        }
+
+        /* Simulation Map UI View */
+        #map-ui-view {
+            display: none;
             position: absolute;
-            top: 35px;
-            left: 35px;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.5);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #090d16;
+            z-index: 10;
+            flex-direction: column;
+            padding: 30px;
+        }
+
+        .sim-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .sim-screen {
+            flex: 1;
+            background: #111827;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .radar-sweep {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border: 1px dashed rgba(56, 189, 248, 0.2);
             border-radius: 50%;
-            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .plane-marker {
+            width: 16px;
+            height: 16px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            box-shadow: 0 0 15px var(--accent-color);
+            position: relative;
+        }
+
+        .plane-marker::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 4px;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-bottom: 12px solid var(--accent-color);
+        }
+
+        .sim-hud {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-danger:hover { background: #dc2626; }
+
+        /* Credits badges */
+        .credits-list {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .credit-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-color);
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-weight: bold;
+            color: var(--accent-color);
         }
     </style>
 </head>
 <body>
-    <div id="ui-overlay">
-        <strong>WSFS Mobile</strong><br>
-        Left Stick: Move Human<br>
-        Right Stick: Look / Pan Camera
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo-area">FLIGHT LAUNCHER</div>
+            <ul class="nav-links">
+                <li><button class="nav-btn active" onclick="switchPage('welcome', this)">Welcome</button></li>
+                <li><button class="nav-btn" onclick="switchPage('start', this)">Start Flight</button></li>
+                <li><button class="nav-btn" onclick="switchPage('about', this)">About</button></li>
+                <li><button class="nav-btn" onclick="switchPage('credits', this)">Credits</button></li>
+            </ul>
+        </nav>
+
+        <!-- Dynamic Content Area -->
+        <main class="content-area">
+            
+            <!-- 1. Welcome Page -->
+            <section id="welcome" class="page active">
+                <h1>Welcome Aboard</h1>
+                <p>Experience seamless flight simulation preparation. Configure your departure airport, select your gate positioning, and launch directly into the active map interface.</p>
+                <button class="btn-primary" onclick="document.querySelectorAll('.nav-btn')[1].click()">Get Started</button>
+            </section>
+
+            <!-- 2. Start Page -->
+            <section id="start" class="page">
+                <h1>Flight Configuration</h1>
+                <p>Select your operational parameters prior to spawning into the simulation grid.</p>
+                
+                <div class="setup-grid">
+                    <div class="form-group">
+                        <label for="airportSelect">Departure Airport</label>
+                        <select id="airportSelect">
+                            <option value="KJFK">John F. Kennedy Intl (KJFK)</option>
+                            <option value="EGLL">London Heathrow (EGLL)</option>
+                            <option value="EDDF">Frankfurt Airport (EDDF)</option>
+                            <option value="OMDB">Dubai International (OMDB)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gateSelect">Spawn Gate</label>
+                        <select id="gateSelect">
+                            <option value="Gate 14">Gate 14 - Terminal 1</option>
+                            <option value="Gate 22">Gate 22 - Terminal 2</option>
+                            <option value="Remote 4">Remote Hardstand 4</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="aircraftSelect">Aircraft Model</label>
+                        <select id="aircraftSelect" disabled>
+                            <option value="A320">Plane Model A320 V1 (Default)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="launchSimulation()">Launch Simulation</button>
+            </section>
+
+            <!-- 3. About Page -->
+            <section id="about" class="page">
+                <h1>About the Project</h1>
+                <p>This application serves as a lightweight control utility and launcher dashboard designed for flight simulation environments. It hooks spatial loading configurations directly into visual telemetry displays, optimizing pre-flight setup sequences with a responsive UI framework.</p>
+            </section>
+
+            <!-- 4. Credits Page -->
+            <section id="credits" class="page">
+                <h1>Credits & Acknowledgments</h1>
+                <p>Brought to you through the collaborative effort of design systems and developer engineering:</p>
+                <div class="credits-list">
+                    <div class="credit-card">Gemini</div>
+                    <div class="credit-card">wsaintz[span_1](start_span)[span_1](end_span)</div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Simulated Map UI (Loads on Start Trigger) -->
+        <div id="map-ui-view">
+            <div class="sim-header">
+                <h2 id="simInfoTitle" style="color: var(--accent-color); font-size: 1.2rem;">Active Simulation: KJFK - Gate 14</h2>
+                <button class="btn-danger" onclick="closeSimulation()">Exit to Menu</button>
+            </div>
+            <div class="sim-screen">
+                <div class="radar-sweep">
+                    <div class="plane-marker" title="A320 V1"></div>
+                </div>
+                <div class="sim-hud">
+                    STATUS: SPAWNED<br>
+                    AIRCRAFT: A320 V1<br>
+                    POSITION: ACTIVE GRID
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Virtual Joysticks for Mobile -->
-    <div id="left-joystick" class="joystick-base"><div id="left-stick" class="joystick-stick"></div></div>
-    <div id="right-joystick" class="joystick-base"><div id="right-stick" class="joystick-stick"></div></div>
-
-    <!-- Three.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // 1. Scene, Camera, Renderer Setup
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050510); // Deep space/sky tone
-
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 50000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        document.body.appendChild(renderer.domElement);
-
-        // 2. Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
-
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        sunLight.position.set(500, 500, 300);
-        scene.add(sunLight);
-
-        // 3. Ground / Earth Platform with Tile Grid Texture effect
-        const groundGeo = new THREE.PlaneGeometry(10000, 10000, 64, 64);
-        const groundMat = new THREE.MeshStandardMaterial({ 
-            color: 0x1e3f20, 
-            roughness: 0.9,
-            wireframe: false 
-        });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
-        ground.rotation.x = -Math.PI / 2;
-        scene.add(ground);
-
-        // Grid lines to simulate map tiles
-        const gridHelper = new THREE.GridHelper(10000, 100, 0x00ffff, 0x444444);
-        gridHelper.position.y = 0.5;
-        scene.add(gridHelper);
-
-        // 4. Spawn Human Avatar (Simple block/capsule representation)
-        const humanGroup = new THREE.Group();
-        
-        // Body
-        const bodyGeo = new THREE.CylinderGeometry(0.6, 0.4, 2.5, 8);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0077ff });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        body.position.y = 1.25;
-        humanGroup.add(body);
-
-        // Head
-        const headGeo = new THREE.SphereGeometry(0.4, 16, 16);
-        const headMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
-        const head = new THREE.Mesh(headGeo, headMat);
-        head.position.y = 2.8;
-        humanGroup.add(head);
-
-        humanGroup.position.set(0, 0, 0);
-        scene.add(humanGroup);
-
-        // 5. Camera & Control Tracking Variables
-        let humanPos = { x: 0, z: 0 };
-        let cameraAngle = 0;
-        let cameraDistance = 12;
-        let cameraHeight = 5;
-
-        // Input data from joysticks
-        let moveInput = { x: 0, y: 0 };
-        let lookInput = { x: 0, y: 0 };
-
-        // 6. Setup Mobile Virtual Joysticks Logic
-        function setupJoystick(baseId, stickId, onMove) {
-            const base = document.getElementById(baseId);
-            const stick = document.getElementById(stickId);
-            let active = false;
-            let center = { x: 0, y: 0 };
-            const maxDist = 35;
-
-            base.addEventListener('touchstart', (e) => {
-                active = true;
-                const rect = base.getBoundingClientRect();
-                center.x = rect.left + rect.width / 2;
-                center.y = rect.top + rect.height / 2;
-                handleTouch(e.targetTouches[0]);
+        function switchPage(pageId, btnElement) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
             });
-
-            window.addEventListener('touchmove', (e) => {
-                if (!active) return;
-                for (let i = 0; i < e.targetTouches.length; i++) {
-                    const touch = e.targetTouches[i];
-                    // Link touch to correct base element roughly
-                    handleTouch(touch);
-                }
-            }, {passive: false});
-
-            window.addEventListener('touchend', (e) => {
-                // Reset if active touch released
-                active = false;
-                stick.style.transform = `translate(0px, 0px)`;
-                onMove(0, 0);
+            // Remove active states from nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
             });
-
-            function handleTouch(touch) {
-                const dx = touch.clientX - center.x;
-                const dy = touch.clientY - center.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const angle = Math.atan2(dy, dx);
-
-                const constrainedDist = Math.min(dist, maxDist);
-                const rx = Math.cos(angle) * constrainedDist;
-                const ry = Math.sin(angle) * constrainedDist;
-
-                stick.style.transform = `translate(${rx}px, ${ry}px)`;
-                onMove(rx / maxDist, ry / maxDist);
-            }
+            // Activate selected page and button
+            document.getElementById(pageId).classList.add('active');
+            btnElement.classList.add('active');
         }
 
-        setupJoystick('left-joystick', 'left-stick', (x, y) => {
-            moveInput.x = x;
-            moveInput.y = y; // Forward/Backward
-        });
-
-        setupJoystick('right-joystick', 'right-stick', (x, y) => {
-            lookInput.x = x;
-            lookInput.y = y;
-        });
-
-        // 7. Animation / Render Loop
-        const speed = 2.5;
-        function animate() {
-            requestAnimationFrame(animate);
-
-            // Move Human based on left joystick relative to camera angle
-            if (Math.abs(moveInput.x) > 0.05 || Math.abs(moveInput.y) > 0.05) {
-                const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraAngle;
-                humanPos.x += Math.sin(moveAngle) * speed * 0.1;
-                humanPos.z += Math.cos(moveAngle) * speed * 0.1;
-                humanGroup.position.x = humanPos.x;
-                humanGroup.position.z = humanPos.z;
-                humanGroup.rotation.y = moveAngle;
-            }
-
-            // Rotate camera via right joystick
-            cameraAngle += lookInput.x * 0.04;
-            cameraHeight = Math.max(1, Math.min(30, cameraHeight - lookInput.y * 0.3));
-
-            // Position camera smoothly behind human user
-            const camX = humanPos.x - Math.sin(cameraAngle) * cameraDistance;
-            const camZ = humanPos.z - Math.cos(cameraAngle) * cameraDistance;
-            camera.position.set(camX, humanGroup.position.y + cameraHeight, camZ);
-            camera.lookAt(humanGroup.position.x, humanGroup.position.y + 1.5, humanGroup.position.z);
-
-            renderer.render(scene, camera);
+        function launchSimulation() {
+            const airport = document.getElementById('airportSelect').value;
+            const gate = document.getElementById('gateSelect').value;
+            
+            document.getElementById('simInfoTitle').innerText = `Active Simulation: ${airport} — ${gate} (A320 V1)`;
+            document.getElementById('map-ui-view').style.display = 'flex';
         }
-        animate();
 
-        // Screen Resize handler
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        function closeSimulation() {
+            document.getElementById('map-ui-view').style.display = 'none';
+        }
     </script>
 </body>
 </html>
