@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>WSFS - Mobile Simulator</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
+        #ui-overlay {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: white;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 15px;
+            border-radius: 8px;
+            pointer-events: none;
+            font-size: 14px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        /* Mobile Joystick Styles */
+        .joystick-base {
+            position: absolute;
+            bottom: 40px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            touch-action: none;
+        }
+        #left-joystick { left: 40px; }
+        #right-joystick { right: 40px; }
+        .joystick-stick {
+            position: absolute;
+            top: 35px;
+            left: 35px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-overlay">
+        <strong>WSFS Mobile</strong><br>
+        Left Stick: Move Human<br>
+        Right Stick: Look / Pan Camera
+    </div>
+
+    <!-- Virtual Joysticks for Mobile -->
+    <div id="left-joystick" class="joystick-base"><div id="left-stick" class="joystick-stick"></div></div>
+    <div id="right-joystick" class="joystick-base"><div id="right-stick" class="joystick-stick"></div></div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // 1. Scene, Camera, Renderer Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050510); // Deep space/sky tone
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 50000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        // 2. Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        sunLight.position.set(500, 500, 300);
+        scene.add(sunLight);
+
+        // 3. Ground / Earth Platform with Tile Grid Texture effect
+        const groundGeo = new THREE.PlaneGeometry(10000, 10000, 64, 64);
+        const groundMat = new THREE.MeshStandardMaterial({ 
+            color: 0x1e3f20, 
+            roughness: 0.9,
+            wireframe: false 
+        });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+
+        // Grid lines to simulate map tiles
+        const gridHelper = new THREE.GridHelper(10000, 100, 0x00ffff, 0x444444);
+        gridHelper.position.y = 0.5;
+        scene.add(gridHelper);
+
+        // 4. Spawn Human Avatar (Simple block/capsule representation)
+        const humanGroup = new THREE.Group();
+        
+        // Body
+        const bodyGeo = new THREE.CylinderGeometry(0.6, 0.4, 2.5, 8);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0077ff });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.y = 1.25;
+        humanGroup.add(body);
+
+        // Head
+        const headGeo = new THREE.SphereGeometry(0.4, 16, 16);
+        const headMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+        const head = new THREE.Mesh(headGeo, headMat);
+        head.position.y = 2.8;
+        humanGroup.add(head);
+
+        humanGroup.position.set(0, 0, 0);
+        scene.add(humanGroup);
+
+        // 5. Camera & Control Tracking Variables
+        let humanPos = { x: 0, z: 0 };
+        let cameraAngle = 0;
+        let cameraDistance = 12;
+        let cameraHeight = 5;
+
+        // Input data from joysticks
+        let moveInput = { x: 0, y: 0 };
+        let lookInput = { x: 0, y: 0 };
+
+        // 6. Setup Mobile Virtual Joysticks Logic
+        function setupJoystick(baseId, stickId, onMove) {
+            const base = document.getElementById(baseId);
+            const stick = document.getElementById(stickId);
+            let active = false;
+            let center = { x: 0, y: 0 };
+            const maxDist = 35;
+
+            base.addEventListener('touchstart', (e) => {
+                active = true;
+                const rect = base.getBoundingClientRect();
+                center.x = rect.left + rect.width / 2;
+                center.y = rect.top + rect.height / 2;
+                handleTouch(e.targetTouches[0]);
+            });
+
+            window.addEventListener('touchmove', (e) => {
+                if (!active) return;
+                for (let i = 0; i < e.targetTouches.length; i++) {
+                    const touch = e.targetTouches[i];
+                    // Link touch to correct base element roughly
+                    handleTouch(touch);
+                }
+            }, {passive: false});
+
+            window.addEventListener('touchend', (e) => {
+                // Reset if active touch released
+                active = false;
+                stick.style.transform = `translate(0px, 0px)`;
+                onMove(0, 0);
+            });
+
+            function handleTouch(touch) {
+                const dx = touch.clientX - center.x;
+                const dy = touch.clientY - center.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx);
+
+                const constrainedDist = Math.min(dist, maxDist);
+                const rx = Math.cos(angle) * constrainedDist;
+                const ry = Math.sin(angle) * constrainedDist;
+
+                stick.style.transform = `translate(${rx}px, ${ry}px)`;
+                onMove(rx / maxDist, ry / maxDist);
+            }
+        }
+
+        setupJoystick('left-joystick', 'left-stick', (x, y) => {
+            moveInput.x = x;
+            moveInput.y = y; // Forward/Backward
+        });
+
+        setupJoystick('right-joystick', 'right-stick', (x, y) => {
+            lookInput.x = x;
+            lookInput.y = y;
+        });
+
+        // 7. Animation / Render Loop
+        const speed = 2.5;
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Move Human based on left joystick relative to camera angle
+            if (Math.abs(moveInput.x) > 0.05 || Math.abs(moveInput.y) > 0.05) {
+                const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraAngle;
+                humanPos.x += Math.sin(moveAngle) * speed * 0.1;
+                humanPos.z += Math.cos(moveAngle) * speed * 0.1;
+                humanGroup.position.x = humanPos.x;
+                humanGroup.position.z = humanPos.z;
+                humanGroup.rotation.y = moveAngle;
+            }
+
+            // Rotate camera via right joystick
+            cameraAngle += lookInput.x * 0.04;
+            cameraHeight = Math.max(1, Math.min(30, cameraHeight - lookInput.y * 0.3));
+
+            // Position camera smoothly behind human user
+            const camX = humanPos.x - Math.sin(cameraAngle) * cameraDistance;
+            const camZ = humanPos.z - Math.cos(cameraAngle) * cameraDistance;
+            camera.position.set(camX, humanGroup.position.y + cameraHeight, camZ);
+            camera.lookAt(humanGroup.position.x, humanGroup.position.y + 1.5, humanGroup.position.z);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Screen Resize handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
